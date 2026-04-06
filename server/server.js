@@ -1,36 +1,54 @@
-const express = require('express');
-const path = require('path');
-const bodyParser = require('body-parser');
-const movieModel = require('./movie-model.js');
-
+const express = require("express");
+const path = require("path");
+// - Importing the movie-model to use as the centralized data store
+const movies = require("./movie-model");
 const app = express();
 
-// Parse urlencoded bodies
-app.use(bodyParser.json()); 
+// - Middleware to parse JSON bodies from PUT requests so we can read movie data
+app.use(express.json());
 
 // Serve static content in directory 'files'
-app.use(express.static(path.join(__dirname, 'files')));
+app.use(express.static(path.join(__dirname, "files")));
 
-// Configure a 'get' endpoint for all movies..
-app.get('/movies', function (req, res) {
-  /* Task 1.2. Remove the line below and eturn the movies from 
-     the model as an array */
-  res.sendStatus(404)
-})
+//___________________
+// serve images from project root /images bc it didnt work before properly with images not loading
+///////app.use("/images", express.static(path.join(__dirname, "../images")));
+//__________________________
 
-// Configure a 'get' endpoint for a specific movie
-app.get('/movies/:imdbID', function (req, res) {
-  /* Task 2.1. Remove the line below and add the 
-    functionality here */
-  res.sendStatus(404)
-})
+// Configure a 'get' endpoint for data..
+app.get("/movies", function (req, res) {
+  // - Converting the movie object values back into an array to keep the original frontend logic working
+  res.json(Object.values(movies));
+});
 
-/* Task 3.1 and 3.2.
-   - Add a new PUT endpoint
-   - Check whether the movie sent by the client already exists 
-     and continue as described in the assignment */
+// - New GET endpoint to fetch a single movie by its ID for the edit form
+app.get("/movies/:imdbID", function (req, res) {
+  const movie = movies[req.params.imdbID];
+  if (movie) {
+    res.json(movie);
+  } else {
+    // - Sending 404 if the requested movie ID does not exist in our model
+    res.sendStatus(404);
+  }
+});
 
-app.listen(3000)
+// - New PUT endpoint to update an existing movie or create a new one
+app.put("/movies/:imdbID", function (req, res) {
+  const imdbID = req.params.imdbID;
+  const isExisting = !!movies[imdbID];
 
-console.log("Server now listening on http://localhost:3000/")
+  // - Overwriting the specific movie key with the new data from the request body
+  movies[imdbID] = req.body;
 
+  if (isExisting) {
+    // - Returning 200 OK for a successful update
+    res.sendStatus(200);
+  } else {
+    // - Returning 201 Created if a new movie was added to the object
+    res.status(201).json(movies[imdbID]);
+  }
+});
+
+app.listen(3000);
+
+console.log("Server now listening on http://localhost:3000/");
